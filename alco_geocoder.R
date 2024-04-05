@@ -12,7 +12,7 @@ countyGeo <- function(locs) {
     # Encode address for API call
     address_encode <- URLencode(address, reserved = TRUE, repeated = TRUE)
     # Build URL for geocode
-    url <- paste0("https://acgisdata.alleghenycounty.us/arcgis/rest/services/Geocoders/AddressSearch/GeocodeServer/findAddressCandidates?SingleLine=", address_encode, '&outSR=4326&f=pjson')
+    url <- paste0("https://acgisdata.alleghenycounty.us/arcgis/rest/services/Geocoders/AddressSearch/GeocodeServer/findAddressCandidates?SingleLine=", address_encode, '&outSR=4326&outFields=*&f=pjson')
     # Print message for user
     message(paste("Source :", url))
     # Send geet request
@@ -25,19 +25,31 @@ countyGeo <- function(locs) {
       # Successful add top candidate
       longitude <- ifelse(c$candidates$location[1,1] == 'NaN', NA, c$candidates$location[1,1])
       latitude <- ifelse(c$candidates$location[1,2] == 'NaN', NA, c$candidates$location[1,2])
+      muni <- c$candidates$attributes$City[1]
+      parcel <- c$candidates$attributes$PARCELID[1]
+      school_dist <- c$candidates$attributes$SCHOOLDISTRICT[1]
+      match_address <- c$candidates$attributes$Place_addr[1]
     } else if (r$status_code == 200) {
       # Error if not address candidates
       message("    Failed with error (200): No address candidates")
       longitude <- NA
       latitude <- NA
+      muni <- NA
+      parcel <- NA
+      school_dist <- NA
+      match_address <- NA
     } else {
       # Print other error
       message(paste0("    Failed with error (", c$error$code, "): ", c$error$message))
       longitude <- NA
       latitude <- NA
+      muni <- NA
+      parcel <- NA
+      school_dist <- NA
+      match_address <- NA
     }
     # Build columns for bind
-    df <- data.frame(longitude, latitude)
+    df <- data.frame(longitude, latitude, muni, parcel, school_dist, match_address)
     
     # Build Dataframe for results
     if (is.null(final)) {
@@ -51,7 +63,7 @@ countyGeo <- function(locs) {
   return(final)
 }
 
-mutate_countyGeo <- function (data, location, ...){
+mutate_countyGeo <- function(data, location, ...){
   # Get data location
   locs <- data[[deparse(substitute(location))]]
   # Run geocde script
