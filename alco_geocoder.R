@@ -4,7 +4,7 @@ require(utils)
 require(plyr)
 require(tidyverse)
 
-countyGeo <- function(locs) {
+countyGeo <- function(locs, endpoint = "verification") {
   # Build Empty Data frace
   final <- NULL
   # Run for each address
@@ -12,7 +12,13 @@ countyGeo <- function(locs) {
     # Encode address for API call
     address_encode <- URLencode(address, reserved = TRUE, repeated = TRUE)
     # Build URL for geocode
-    url <- paste0("https://acgisdata.alleghenycounty.us/arcgis/rest/services/Geocoders/AddressSearch/GeocodeServer/findAddressCandidates?SingleLine=", address_encode, '&outSR=4326&outFields=*&f=pjson')
+    if (endpoint == "verification") {
+      url <- paste0("https://gisdata.alleghenycounty.us/arcgis/rest/services/Geocoders/AddressVerification/GeocodeServer/findAddressCandidates?SingleLine=", address_encode, '&outSR=4326&outFields=*&f=pjson')
+    } else if (endpoint == "search") {
+      url <- paste0("https://gisdata.alleghenycounty.us/arcgis/rest/services/Geocoders/AddressSearch/GeocodeServer/findAddressCandidates?SingleLine=", address_encode, '&outSR=4326&outFields=*&f=pjson')
+    } else {
+      stop('Please provide a valid value for the endpoint argument of either `search` or `verification`')
+    }
     # Print message for user
     message(paste("Source :", url))
     # Send geet request
@@ -29,6 +35,7 @@ countyGeo <- function(locs) {
       parcel <- c$candidates$attributes$PARCELID[1]
       school_dist <- c$candidates$attributes$SCHOOLDISTRICT[1]
       match_address <- c$candidates$attributes$Place_addr[1]
+      score <- c$candidates$score[1]
     } else if (r$status_code == 200) {
       # Error if not address candidates
       message("    Failed with error (200): No address candidates")
@@ -38,6 +45,7 @@ countyGeo <- function(locs) {
       parcel <- NA
       school_dist <- NA
       match_address <- NA
+      score <- NA
     } else {
       # Print other error
       message(paste0("    Failed with error (", c$error$code, "): ", c$error$message))
@@ -47,6 +55,7 @@ countyGeo <- function(locs) {
       parcel <- NA
       school_dist <- NA
       match_address <- NA
+      score <- NA
     }
     # Build columns for bind
     df <- data.frame(longitude, latitude, muni, parcel, school_dist, match_address)
